@@ -4,9 +4,13 @@ import pandas as pd
 import time
 pd.set_option('display.max_rows', None)
 sportsRecieve = []
-
-# An api key is emailed to you when you sign up to a plan
-API_KEY = '707f98bcf9f78833e11059728a4f9be8'
+#
+#
+#
+#
+#
+#HERE IS WHERE TO INPUT THE API KEY FROM YOUR EMAIL INSIDE OF THE ''!!!!
+API_KEY = ''
 
 TYPE = 'upcoming' # use the sport_key from the /sports endpoint below, or use 'upcoming' to see the next 8 games across all sports
 
@@ -18,12 +22,6 @@ ODDS_FORMAT = 'decimal' # decimal | american
 
 DATE_FORMAT = 'iso' # iso | unix
 
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-#
-# First get a list of in-season sports
-#   The sport 'key' from the response can be used to get odds in the next request
-#
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 sports_response = requests.get(
     'https://api.the-odds-api.com/v4/sports', 
@@ -35,17 +33,6 @@ sports_response = requests.get(
 
 if sports_response.status_code != 200:
     print(f'Failed to get sports: status_code {sports_response.status_code}, response body {sports_response.text}')
-
-
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
-#
-# Now get a list of live & upcoming games for the sport you want, along with odds for different bookmakers
-# This will deduct from the usage quota
-# The usage quota cost = [number of markets specified] x [number of regions specified]
-# For examples of usage quota costs, see https://the-odds-api.com/liveapi/guides/v4/#usage-quota-costs
-#
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 odds_response = requests.get(
     f'https://api.the-odds-api.com/v4/sports/{TYPE}/odds',
@@ -65,8 +52,8 @@ else:
     odds_json = odds_response.json()
     print('Number of events:', len(odds_json))
     # Check the usage quota
-    print('Remaining requests', odds_response.headers['x-requests-remaining'])
-    print('Used requests', odds_response.headers['x-requests-used'])
+    for x in odds_json:
+        sportsRecieve.append(x["sport_key"])
 
 sports = pd.Series(sportsRecieve)
 print(sports)
@@ -104,22 +91,56 @@ else:
     for x in games:
         out.append(x[0] + " vs " + x[1])
     gamesFin = pd.Series(out)
+    print(gamesFin)
     print("what game would you like to see the odds for? Print the number corresponding")
-    gameNum=(int(input))
+    gameNum=(int(input()))
     print()
     idx=0
     hosts=[]
     winWeight=[]
-    drawWeight=[]
+    #drawWeight=[]
     lossWeight=[]
     for x in bookmakers[gameNum]:
-        
         hosts.append(x["key"])
-        
-        winWeight.append(x["outcomes"][0]["price"])
-        drawWeight.append(x["outcomes"][2]["price"])
-        lossWeight.append(x["outcomes"][1]["price"])
-    
+        winWeight.append(float(x["markets"][0]["outcomes"][0]["price"]))
+        #try:
+            #drawWeight.append(float(x["markets"][0]["outcomes"][2]["price"]))
+        #except:
+           # pass
+        lossWeight.append(float(x["markets"][0]["outcomes"][1]["price"]))
+    #if drawWeight is not []:
+        #rates = pd.DataFrame({'host' : hosts, 'win weight' : winWeight, 'draw weight' : drawWeight, 'loss weight' : lossWeight})
+    #else:
+    rates = pd.DataFrame({'host' : hosts, 'win weight' : winWeight, 'loss weight' : lossWeight})
+    avgWin = sum(winWeight)/len(hosts)
+    #avgDraw = sum(drawWeight)/len(hosts)
+    avgLoss = sum(lossWeight)/len(hosts)
+    print("what is the win weight on your app: e.x 1.3")
+    inpWin = input()
+    print("what is the loss weight on your app: e.x 2.3")
+    inpLoss = input()
+    #print("what is the draw weight on your app (if no draws input 0): e.x 2.4")
+    #inpDraw = input()
+    print(rates)
+    outputted = False
+    if float(inpWin) > avgWin:
+        print("The payout for a win is likely to payout more than it statistically should. ")
+        outputted=True
+    if float(inpLoss) > avgLoss:
+        print("The payout for a loss is likely to payout more than it statistically should")
+        outputted=True
+    if outputted == False:
+        print("your app has no favorable bets for this event")
+    #if inpDraw > drawWeight and drawWeight != 0:
+     #   print("The payout for a draw is likely to payour more than it statistically should") 
+
+    print("average win weight: " + str(avgWin))
+    #if sum(drawWeight) != 0:
+    #    print("average draw weight: " + str(avgDraw))
+    #else:
+      #  print("no draws")
+    print("average loss weight: " + str(avgLoss))
+
     
     # Check the usage quota
     print('Remaining requests', odds_response.headers['x-requests-remaining'])
